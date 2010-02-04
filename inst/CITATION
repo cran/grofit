@@ -1,0 +1,23 @@
+citHeader("To cite grofit in publications use:")
+
+citEntry(entry = "Article",
+  title        = "{grofit}: Fitting Biological Growth Curves with {R}",
+  author       = personList(as.person("Matthias Kahm"),
+                   as.person("Guido Hasenbrink"),
+                   as.person("Hella Lichtenberg-Frat{\'e}"),
+                   as.person("Jost Ludwig"),
+                   as.person("Maik Kschischo")),
+  journal      = "Journal of Statistical Software",
+  year         = "2010",
+  volume       = "33",
+  number       = "7",
+  pages        = "1--21",
+  url          = "http://www.jstatsoft.org/v33/i07/",
+
+  textVersion  =
+  paste("Matthias Kahm, Guido Hasenbrink, Hella Lichtenberg-Frate, Jost Ludwig, Maik Kschischo (2010).",
+        "grofit: Fitting Biological Growth Curves with R.",
+        "Journal of Statistical Software, 33(7), 1-21.",
+        "URL http://www.jstatsoft.org/v33/i07/.")
+)
+

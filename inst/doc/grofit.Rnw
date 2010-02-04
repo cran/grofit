@@ -1,0 +1,789 @@
+\documentclass[article, shortnames, nojss]{jss}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% declarations for jss.cls %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\bibliographystyle{jss}
+%% almost as usual
+\author{Matthias  Kahm \\ RheinAhrCampus  \And  
+        Guido  Hasenbrink \\University of Bonn  \And
+	Hella  Lichtenberg-Frat\'e \\University of Bonn  \AND
+        Jost  Ludwig  \\University of Bonn  \And
+        Maik  Kschischo \\ RheinAhrCampus }
+
+\title{\pkg{grofit}: Fitting Biological Growth Curves with \proglang{R}}
+
+%% for pretty printing and a nice hypersummary also set:
+\Plainauthor{Matthias Kahm, Guido Hasenbrink, Hella Lichtenberg-Frat\'e, Jost Ludwig, Maik Kschischo} %% comma-separated
+\Plaintitle{grofit: Fitting growth curves with R} %% without formatting
+%\Shorttitle{A Capitalized Title} %% a short title (if necessary)
+
+%% an abstract and keywords
+\Abstract{
+The following description of the package \pkg{grofit} was also published as \cite{Kahm+Hasenbrink+Lichtenberg-Frate:2010}.
+The \pkg{grofit} package was developed to fit many growth curves obtained under different conditions in order to derive a conclusive dose-response curve, for instance for a compound that potentially affects growth. \pkg{grofit} fits data to different parametric models and in addition provides a model free spline method to circumvent systematic errors that might occur within application of parametric methods. This amendment increases the reliability of the characteristic parameters (e.g.,lag phase, maximal growth rate, stationary phase) derived from a single growth curve. By relating obtained parameters to the respective condition (e.g.,concentration of a compound) a dose response curve can be derived that enables the calculation of descriptive pharma-/toxicological values like half maximum effective concentration (EC50). Bootstrap and cross-validation techniques are used for estimating confidence intervals of all derived parameters.
+}
+\Keywords{growth curve, dose response curve, EC50, bootstrap}
+
+\Plainkeywords{growth curve, dose response curve, EC50, bootstrap} %% without formatting
+%% at least one keyword must be supplied
+
+%% publication information
+%% NOTE: Typically, this can be left commented and will be filled out by the technical editor
+%% \Volume{13}
+%% \Issue{9}
+%% \Month{September}
+%% \Year{2004}
+%% \Submitdate{2004-09-29}
+%% \Acceptdate{2004-09-29}
+
+\Address{
+  Matthias  Kahm\\
+  University of Applied Sciences Koblenz, RheinAhrCampus\\
+  Department of Mathematics and Technology\\
+  S\"{u}dallee 2\\
+  D-53424 Remagen/Germany\\
+  E-mail: \email{sysbio\_software@rheinahrcampus.de}\\
+  \\
+  Guido  Hasenbrink\\	
+  University of Bonn\\
+  Institute for Cellular and Molecular Botany\\
+  Kirschallee 1\\
+  D-53115 Bonn/Germany\\
+  \\
+  Hella  Lichtenberg-Frat\'e\\	
+  University of Bonn\\
+  Institute for Cellular and Molecular Botany\\
+  Kirschallee 1\\
+  D-53115 Bonn/Germany\\
+  \\
+  Jost  Ludwig\\
+  University of Bonn\\
+  Institute for Cellular and Molecular Botany\\
+  Kirschallee 1\\
+  D-53115 Bonn/Germany\\	
+  \\
+  Maik Kschischo\\		
+  University of Applied Sciences Koblenz, RheinAhrCampus\\
+  Department of Mathematics and Technology\\
+  S\"{u}dallee 2\\
+  D-53424 Remagen/Germany\\
+  E-mail: \email{sysbio\_software@rheinahrcampus.de}
+}
+
+%% It is also possible to add a telephone and fax number
+%% before the e-mail in the following format:
+%% Telephone: +43/1/31336-5053
+%% Fax: +43/1/31336-734
+
+%% for those who use Sweave please include the following line (with % symbols):
+%% need no \usepackage{Sweave.sty}
+\usepackage{thumbpdf}
+\usepackage{algorithmic}
+%\usepackage{algorithm2e}
+%% end of declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+%\VignetteIndexEntry{grofit}
+\section[Introduction]{Introduction}
+Modeling biological growth pertains to several hierarchically ordered complexity levels like cells, organisms, populations and communities or ecosystems. Approaches to understanding patterns of change comprise but are not limited to issues as e.g., cellular growth rates \citep{Ari2009}, coordination of growth with cell division \citep{Ala2007},
+growth and metamorphosis within development and life cycles at the organismal level \citep{Qu2004} birth and survival rates or variations within species at the population level and not least living ecosystems and growth \citep{Jor2000, Fat2004} or food chains.
+Compared to kinetic analyses of biochemical data such issues are oriented towards the understanding of the mechanisms that link two or more processes, like e.g., the relationships between growth and cell cycle have been fitted using empirical functions or, more recently, by mathematical modeling based on a signal transduction network \citep{Qu2004}. In contrast, modeling of biochemical data pertain to a single or few biochemical components or enzyme kinetic studies, the narrowest/lowest functional level within the system properties of a cell. Obtained data sets require in depth parametric statistics to estimate the precision of the results involving also descriptive methods and virtually all of the models needed for kinetic studies are non-linear.
+
+Biologists often utilize growth experiments to analyse basic properties of a given organism or cellular model.
+To investigate the specific effect of a given experimental set up or condition, e.g., a compound or substrate,
+characteristic parameters of the growth curves are  derived. This should ideally reveal a relationship between the concentration of a compound/substrate and its corresponding effect on a particular growth parameter. Having obtained a statistical relevant number of such growth curves (under different conditions like compound/substrate concentrations) dose response plots can be computed that enable the estimation of characteristic descriptive values such as EC50, IC50 (half maximum effective or inhibitory concentration) or else.
+
+A typical example of the workflow implemented in \pkg{grofit} is given in Figure~\ref{fig:howto}. Yeast cells were treated with different concentrations of a compound (here Hygromycin B). Growth was measured as the optical density (see~\citep{Has06} for details) at different time points. From the fitted growth curves the maximum 
+growth rate $\mu$ (see Figure~\ref{fig:scheme}) was derived. The response $\mu$ was then
+plotted against the dose in Figure~\ref{fig:howto}(b). A dose response curve was fitted and 
+the EC50 value was estimated (see Section~\ref{sec:progrun}).
+
+<<echo=FALSE, results=hide>>=
+library("grofit")
+data("grofit.time")
+data("grofit.data")
+MyOpt1 <- grofit.control(smooth.gc = 0.5, parameter = 28, interactive = FALSE)
+TestRun1 <- grofit(grofit.time, grofit.data, TRUE, MyOpt1)
+
+MyOpt2 <- grofit.control(smooth.gc = 0.5, parameter = 28, interactive = FALSE, log.x.dr = TRUE)
+TestRun2 <- grofit(grofit.time, grofit.data, TRUE, MyOpt2)
+
+colData <- c("black", "cyan", "magenta", "green", "blue", "orange", "grey")
+pch     <- 1:7
+@
+
+\setkeys{Gin}{width=\textwidth}
+\begin{figure}[htbp]
+\begin{center}
+<<post-plot1, fig=TRUE, echo=FALSE, height=3, width=8>>=
+par(mfrow = c(1, 3), mar = c(5.1, 4.1, 3.1, 1.1))
+plot(TestRun1$gcFit, opt = "s", colData = colData, colSpline = 1, pch = pch, cex = 1)
+title("a")
+plot(TestRun1$drFit$drFittedSplines[[1]], colData = colData, pch = pch, cex = 1)
+title("b")
+plot(TestRun2$drFit$drFittedSplines[[1]], colData = colData, pch = pch, cex = 1)
+title("c")
+@
+\caption{\label{fig:howto} Deriving dose response curves from growth experiments: (a) Several fitted growth curves obtained under different concentrations (in $\mu M$) of Hygromycin~B. 
+(b)~The maximum slope corresponding to the growth rate~$\mu$ (see Figure~\ref{fig:scheme}) of each curve in (a) is calculated and plotted \it vs. \rm the corresponding concentration. From these data points a dose response curve is estimated by fitting a smoothed spline. Consequently, the EC50 value 6.92 $\mu M$ is estimated. (c)~In order to obtain a more uniform distribution of the data points a logarithmic transformation to the concentration axis can be applied.}
+\end{center}
+\end{figure}
+
+Many different mathematical models for growth have been developed, see e.g., \cite{Zwie90} 
+for a review. These models can be fitted to the data using nonlinear least squares and characteristic 
+growth parameters can be derived from the  fit. Our experience is, however, that parametric growth curves like e.g., Gompertz or logistic law do not always accurately describe cellular growth. For some data sets the application of these models can potentially lead to systematic errors, because the functional relation between time and growth is not obvious, introducing considerable alterations in the conclusions derived from growth curve experiments.
+
+\cite{Bir99} introduced a generalised model of growth equations in support of the notion that knowledge of the underlying mathematical model may be not essential, but the reliable estimation of the characteristic growth parameters. In accordance with this we apply model-free spline fits in addition to the conventional parametric fit to estimate characteristic parameters from the growth curve.
+
+The methods applied for fitting growth curves and for deriving doses response curves are described in the second section. Sections~\ref{proguse}-\ref{sec:progrun} describe the functions and the application of \pkg{grofit}. The package is available from the Comprehensive \proglang{R} Archive Network at \url{http://CRAN.R-project.org/package=grofit} and also from the developers website \url{http://www.rheinahrcampus.de/Software.2447.0.html}.
+%
+%
+%
+%
+%
+\section{Methods}
+%
+\subsection{Fitting of growth curves}
+\pkg{grofit} applies two different strategies for fitting a given growth curve: Model-based fits and model-free spline fits. The former requires a mathematical model for the description of cellular growth. Four different models~(Table~\ref{tab:models}) were implemented in \pkg{grofit}: 1. Logistic growth, 2. Gompertz growth, 3. modified Gompertz growth and 4. Richards growth (Table~\ref{tab:models}). All these models  have at least three characteristic parameters: the length of lag phase $\lambda$, the growth rate $\mu$ and the maximum cell growth $A$. The features of these parameters are illustrated in Figure~\ref{fig:scheme}. The modified  Gompertz growth model and the Richards model offer some flexibility utilizing additional parameter values. The modified Gompertz law enables a second increase after the function enters a first saturation plateau. Here, the shifting parameter $t_{shift}$ and the scaling factor $\alpha$ control the location (time) and the strength (slope) of the second increase. The shape exponent of Richards law enables flexible adjustment that the point of inflexion can be at any value between zero and $A$, see~\cite{Zwie90} for details.
+
+\begin{table}[bt]
+ \centering
+\begin{tabular}{l|l|c}
+Model 	& Formula  	& Parameter      \\ \hline
+Logistic&$y(t)=\frac{A}{1+\exp\left(\frac{4\mu}{A}(\lambda-t)+2\right)}$& $A,\mu,\lambda$\\\hline
+Gompertz&$y(t)=A\cdot \exp\left[-\exp\left(\frac{\mu\cdot e}{A}\left(\lambda-t\right)+1\right)\right]$& $A,\mu,\lambda$\\ \hline
+modified Gompertz&  $y(t)=A\cdot \exp\left[-\exp\left(\frac{\mu\cdot e}{A}\left(\lambda-t\right)+1\right)\right]$  &  \\ 
+&\hfill $+ A\cdot \exp\left(\alpha(t-t_{shift})\right)$ &$A,\mu,\lambda,\alpha,t_{shift}$\\\hline
+ Richards &$y(t)=A\cdot  $ &  \\
+ &\hfill$\left[ 1+ \nu\cdot \exp\left( 1+\nu+ \frac{\mu}{A}\cdot(1+\nu)^{1+1/\nu}\cdot(\lambda-t)\right)\right]^{(-1/\nu)}$ & $A,\mu,\lambda,\nu$\\
+\end{tabular}
+\caption{Growth $y(t)$ as function of time $t$ for the models implemented in \pkg{grofit}.}
+\label{tab:models}
+\end{table}
+%
+\begin{figure}[tb]
+\centerline{\includegraphics[width=0.75\textwidth]{scheme.pdf}}
+\caption{Typical parameters derived from growth curves: length of lag phase $\lambda$, growth rate represented by the maximum slope $\mu$ and the maximum cell growth $A$. The integral (area under the curve) is also used as growth parameter.}
+\label{fig:scheme}
+\end{figure}
+%
+The fitting of the parametric growth models is described in the algorithm from Table~\ref{alg:gcFitModel}. Nonlinear least square fits 
+require suitable starting values for the parameter values to be estimated. Starting values are obtained from 
+local weighted regression fit \code{lowess} \citep{Clev79}. The \pkg{nls} \citep{Bat88, Bat92} package is used for nonlinear least squares fitting of these models. Decisions pertaining which model fits the data best are drawn according to an Akaike information criterion \citep{Aka73}. According to this, the best fitting model is then used to estimate the  growth parameters $\lambda,\mu$ and $A$. In addition, the area under the curve is estimated by numerical integration as an alternative characteristic of cellular growth~\citep{Has06}.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<<echo=FALSE>>=
+x <- 1:59
+y <- c(0.0825, 0.0832, 0.0849, 0.0846, 0.0859, 0.0854, 0.0862, 0.0876, 0.0888, 0.0898,
+0.0912,0.0937,0.0944,0.0979,0.1001,0.1041,0.1059,0.1113,0.1180,0.1234,0.1319,0.1366,
+0.1542,0.1534,0.1621,0.1721,0.1817,0.1911,0.2004,0.2101,0.2246,0.2382,0.2546,0.2748,
+0.2916,0.3071,0.3285,0.3484,0.3689,0.3901,0.4087,0.4264,0.4377,0.4478,0.4516,0.4538,
+0.4579,0.4651,0.4679,0.4669,0.4715,0.4733,0.4804,0.4837,0.4885,0.4906,0.5009,0.5072,0.5127)
+model  <- gcFitModel(x, y, control = grofit.control(suppress.messages = TRUE))
+spline <- gcFitSpline(x, y, control = grofit.control(suppress.messages = TRUE))
+@
+
+<<plot3, echo=FALSE, eval=FALSE>>=
+plot(model, colData = 1, colModel = 1)
+plot(spline, add = TRUE, raw = FALSE, colData = 1, colSpline = 2)
+@
+
+\setkeys{Gin}{width=0.75\textwidth}
+\begin{figure}[htbp]
+\begin{center}
+<<post-plot3, fig=TRUE, echo=FALSE>>=
+<<plot3>>
+legend(x = "bottomright", lty = c(1,1), legend = c(model$model, "spline"), col = c(1,2), bty = "n")
+@
+\caption{\label{fig:curvefit} Comparison of parametric and model free spline fits. The growth data (circles) were fitted by a spline fit (black line). The maximum slope of the spline fit was used as an estimate for the growth rate $\mu$. This estimate is more accurate than the best fitting parametric model (Richards equation, red lines), as can be seen from the difference in the slopes of the tangents (straight lines).}
+\end{center}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Parametric growth curves are useful and straight forward to interprete when they accurately fit the data. We  noticed, however, that often real data cannot sufficiently be described by using a parametric model. As an alternative we implemented a model-free method (Table~\ref{alg:gcFitSpline}). This  model free fit applies a smoothed cubic spline as it is implemented in the \proglang{R} function \code{smooth.spline}. A spline fit {\it per se} does not assume a functional relationship between time and growth data. The smoothness can individually be set by a parameter and an optimal value of this parameter can be identified by the program using cross-validation techniques. 
+
+Figure~\ref{fig:curvefit} shows the main differences between the two approaches. All four characteristic growth parameters ($\lambda,\mu, A$  and the area under the curve) were estimated from the parametric model and from the spline fit. According to the Akaike criterion, the best fitting parametric model was the logistic equation approaching the limit $A$ for large values of time $t$.  However, the maximum growth $A$ was not reached by the actual data points. In this example, a diauxic shift prevents the curve from reaching saturation in the observed time interval. Thus, a more reliable parameter of growth is the maximum growth rate $\mu$. It is estimated from the maximum slope of the fitted growth curve. It appears conclusive that the smoothing spline gives a more accurate estimate of $\mu$.  We conclude therefore that the derivation of descriptive characteristics from parametric fits may potentially lead to unreliable predictions. A spline fit in contrast produces more accurate estimates of the characteristic growth parameters.
+
+Confidence intervals for $\mu$ and the other parameters are estimated by using a  nonparametric bootstrap method~\citep{Efron93}, see algorithm from Table~\ref{alg:gcBootSpline}. A bootstrap sample (with replacement) is generated from the original data. For each of the bootstrap samples, the characteristic parameter values $\lambda,\mu$ and $A$ are estimated. These values can be displayed as bootstrap histograms (\code{plot}) and provide a visual guide to the variability of the different growth parameters. Standard bootstrap estimates are computed for the mean values and confidence intervals of $\lambda,\mu$ and $A$. The same procedure is also performed for the integral of the growth curve. 
+%
+%
+\subsection{Fitting of dose response curves}
+Each of the four parameters derived from the growth curves at different compound concentrations can in principle be perceived as a characteristic response variable. The decision for one particular parameter depends in most cases on the specific experiment performed. It is advised to empirically estimate, which of the variables computed by \pkg{grofit} shows the highest sensitivity and indicates changes in growth most reliable.
+In addition, the confidence intervals obtained from fitting the growth curves provide further guidance to the best choice of the response variable. From our experiences with cellular growth~\citep{Has06} data we conclude that in many cases the maximum growth rate $\mu$ is a reliable descriptor. 
+
+A dose response curve was derived from a fit of the selected growth parameter {\it versus} the dose, see again Figure~\ref{fig:howto}(c).  Here we applied again the spline technique to receive a model-free relationship between dose and response (algorithm from Table~\ref{alg:drFitSpline}). This offers the advantage that a large variety of different dose-response functions can be captured with a single method. From the resulting curve the EC50 value was estimated. EC50 confidence intervals were obtained by a bootstrap method (algorithm from Table~\ref{alg:drBootSpline}). Bootstrap histograms  for the EC50 and related parameters can be plotted for visual inspection.
+%
+\begin{table}[htbp]
+\hrulefill
+\caption{Algorithm for parametric fit (\code{gcFitModel})}
+\hrulefill
+
+\begin{algorithmic}
+\STATE Input time and corresponding growth data for different conditions
+\STATE Call \code{gcFitSpline} with lowess option to estimate initial values for parametric fit
+\FOR{all datasets}
+	\FORALL{parametric models}
+    \STATE try to fit data according to currentModel by using \proglang{R}-function \code{nls}
+       \IF{fit successful}
+          \STATE determine AIC
+          \IF{ currentAIC < bestAIC}
+          	\STATE bestAIC = currentAIC
+          	\STATE bestModel = currentModel
+         \ENDIF
+       \ENDIF
+   \ENDFOR   
+\ENDFOR
+\STATE Determine characteristic values ($A$, $\mu$, $\lambda$, integral) for bestModel
+\end{algorithmic}
+\hrulefill
+\label{alg:gcFitModel}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[htbp]
+\hrulefill
+\caption{Algorithm for model free fit (\code{gcFitSpline})}
+\hrulefill
+
+\begin{algorithmic}
+\STATE Input time and related growth data
+\STATE Call \proglang{R}-function \code{smooth.spline}
+\STATE Estimate characteristic growth parameters from spline fit
+\STATE Call \proglang{R}-function \code{lowess}
+\STATE Estimate characteristic growth parameters from local weighted average fit
+\end{algorithmic}
+\hrulefill
+\label{alg:gcFitSpline}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[htbp]
+\hrulefill
+\caption{Algorithm for parametric fit (\code{gcFitModel})}
+\hrulefill
+
+\begin{algorithmic}
+\STATE Input time and related growth data of size $k$
+\FOR{1:number of bootstrap samples}
+  \STATE Choose with replacement a random sample of length $k$ from given data
+  \STATE Call \code{gcFitSpline} with random samples of time and growth
+  \STATE Store characteristic growth values ($A$, $\mu$, $\lambda$, integral)
+\ENDFOR
+\STATE Generate bootstrap mean and confidence intervals for ($A$, $\mu$, $\lambda$, integral)
+\end{algorithmic}
+\hrulefill
+\label{alg:gcBootSpline}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[htbp]
+\hrulefill
+\caption{Algorithm for dose response curve estimation (\code{drFitSpline})}
+\hrulefill
+
+\begin{algorithmic}
+\STATE Input concentration and respecting characteristic growth parameter
+\STATE Call \proglang{R}-function \code{smooth.spline} to estimate dose response curve
+\STATE Estimate EC50 from spline fit
+\end{algorithmic}
+\hrulefill
+\label{alg:drFitSpline}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[htbp]
+\hrulefill
+\caption{Algorithm for bootstrap of dose response curve (\code{drBootSpline})}
+\hrulefill
+
+\begin{algorithmic}
+\STATE Input concentration and respecting characteristic growth parameter
+\FOR{1:number of bootstrap samples}
+\STATE Call \proglang{R}-function \code{smooth.spline} to estimate dose response curve
+\STATE Estimate EC50 from spline fit
+\STATE Store EC50
+\ENDFOR
+\STATE Generate bootstrap mean and confidence intervals for EC50
+\end{algorithmic}
+\hrulefill
+\label{alg:drBootSpline}
+\end{table}
+%
+\section{Program application}
+\label{proguse}
+\pkg{grofit} comes as a \proglang{R} package enabling the user to decide which functions are actually requested thus providing maximum flexibility. Nevertheless, the package can be used to run a standard workflow including all provided features.
+
+To use \pkg{grofit} the \proglang{R} version 2.9.0 or later must be installed on your System. Visit \url{http://www.r-project.org} for downloading the latest version.
+%
+%
+\subsection{Preparation of input data}
+This describes the data format requested by the \code{grofit} function that implements the standard workflow. 
+Data can be imported preferably from \code{*.csv} files (comma separated values), that are generated and read by any standard spreadsheet program. To run \pkg{grofit} the data must be arranged in a special format. The function requires a numeric matrix with time data and a \code{data.frame} object containing growth data as well as additional information.\\
+Here we describe the numeric matrix named time. It consists of $n$ columns for the time points and $m$ rows for the different experiments. 
+    \begin{equation}
+    \begin{array}{c||cccc}
+            \ddots & t_1 & t_2 & \ldots & t_n \\ \hline
+            \mbox{Experiment 1} & 1 & 2 & ... & 8 \\
+            \mbox{Experiment 2} & 1 & 3 & ... & 9 \\
+            \vdots  & \vdots& \vdots & \vdots& \vdots \\
+            \mbox{Experiment m} & 2 & 3 &...& 7
+    \end{array}
+    \end{equation}\\
+Note: the matrix only contains the numerical values and not the description of the rows and columns.
+In practical use the user may work with standard time points therefore having only a vector of time data. To construct a matrix of time points just type
+
+\code{timepoints <- 1:15}
+
+\code{time <- t(matrix(rep(timepoints, m), c(n, m)))}
+
+where n refers to the number of time points and m to the number of data sets.\\
+Next we describe a \code{data.frame} object, named \code{data}. A data.frame is nothing but a matrix except the fact that it may contain different data types. Requested is a \code{data.frame} of $m$ rows belonging to each experiment and $3+n$ columns containing growth data corresponding to \code{time} and additional information. Therefore the data.frame appears as:
+        \begin{equation}
+    \begin{array}{c||ccc|cccc}
+            \ddots & \mbox{Experiment Id}& \mbox{Add. info} & \mbox{Concentration}& d_1 & d_2 & \ldots & d_n \\ \hline
+            \mbox{Exp 1} & \mbox{test\_1} & \mbox{medium}& \mbox{0.13} & 1 & 2 & ... & 20 \\
+            \mbox{Exp 2} & \mbox{test\_1} & \mbox{high}& \mbox{0.23} & 3 & 5 & ... & 19 \\
+            \mbox{Exp 3} & \mbox{test\_1} & \mbox{medium}& \mbox{0.46} & 2 & 3 & ... & 17 \\
+            \mbox{Exp 4} & \mbox{test\_1} & \mbox{medium}& \mbox{0.57} & 1 & 3 & ... & 14 \\
+            \vdots  &\vdots& \vdots & \vdots& \vdots& \vdots & \vdots& \vdots \\
+            \mbox{Exp m-1} & \mbox{test\_2} & \mbox{low}& \mbox{0.12} & 1 & 3 &...& 23\\
+            \mbox{Exp m}   & \mbox{test\_2} & \mbox{high}& \mbox{0.24} & 2 & 3 &...& 20\\
+    \end{array}
+    \end{equation}\\
+The first three columns serve to identify individual experiments. In the second column the user is free to put in any information considered as suitable. The first and the third column are the most important. In the first column one should give \it one \rm name for an experiment that is made under a certain condition. In the third column one specifies that condition by giving a concentration of the tested substance. That means: the entry of the first column will be the same over several rows, while the entry in the third column will change. Such arragement is necessary to determine the dose response curves. It does not matter in which order the experiment ID or the concentrations appear.
+
+Note: If one is only interested in growth curves the first three columns can be utilized in any way. But the output of the growth curve fit cannot be further used for dose-response curve fitting without manipulation.
+
+Note: Do not use any special symbols like \code{/}, \code{*}, \code{\"{u}}, \code{' '} (blank) etc. for description in the first three rows. These symbols may cause errors in current or future versions of \proglang{R}. Use \code{\_}, \code{.}, or \code{-} instead.
+%
+%
+%
+\subsubsection{Create input data using spreadsheet programs}
+An alternative to data import and manipulation is the use of a spreadsheet program like \code{Excel}. Copy and paste the data in the format as it was described above. In case of missing values the according cell is left empty. Then export the sheet as a csv-file (or \code{*.txt} either). In \proglang{R} type
+
+\code{data <- read.table("PATH/data.csv", header = FALSE, sep = ";", dec = ".")}
+
+\code{time <- read.table("PATH/time.csv", header = FALSE, sep = ";", dec = ".")}
+
+Note: Depending on the language settings of your system, one may need to use other options for \code{sep} and \code{dec}. Open the exported \code{*.csv} file in an appropriate editor (\code{WordPad}, \code{Kate} etc.) and see documentation of \code{read.table} to find out the necessary options.
+%
+%
+%
+\subsection{Simulating data}
+We deposited a dataset for testing purposes in the data folder of the package. To create simulated data sets we included the function \code{ran.data}. To generate a data set with 30 timepoints and 40 datasets type:
+\begin{Code}
+dataset <- ran.data(40, 30, 1, 5, 15)
+
+data <- dataset$data
+
+time <- dataset$time
+\end{Code}
+This will generate data according to Gompertz law using $\mu=1$, $\lambda=5$ and $A=15$. These parameters are slightly changed in each data set to simulate the dependence of growth curves from a substance. In addition some noise is added to the generated data 
+%
+%
+%
+\subsection{Options}
+\label{options}
+The options can be set by the call of the \code{grofit.control} function, which returns an object of class \code{grofit.control}, depicting a list including all \pkg{grofit} options. To change the default values type
+\code{
+MyOpt <- grofit.control(fit.opt = "s", model.type = c("gompertz"), ...)
+}
+The options are related to different parts of the program and are described in detail below.
+%
+%
+%
+\subsection{Common options}
+\label{sec:globopt}
+\begin{itemize}
+\item \code{neg.nan.act}: logical (\code{TRUE}/ \code{FALSE}), indicates whether the program should stop when negative growth values or non numerical values appear (\code{TRUE}). Otherwise the program remove these values silently (\code{FALSE}). Improper values may be caused by incorrect data or input errors. Default: \code{FALSE}.
+\item \code{clean.bootstrap}: logical, determines if negative
+values which occur during bootstrap should be removed
+(\code{TRUE}) or kept (\code{FALSE}). Note: Infinite values were always removed. Default: \code{TRUE}.
+\item \code{suppress.messages}: logical, determines if \pkg{grofit} messages like information about current growth curve, EC50 values etc. shall be printed to screen (\code{FALSE}) or not (\code{TRUE}). This option serves to speed up the processing of high troughput data. Note: warning messages are still displayed. Default: \code{FALSE}.
+\end{itemize}
+%
+%
+%
+\subsection{Fit growth curve options}
+\label{sec:gcopt}
+\begin{itemize}
+\item \code{fit.opt}: indicates whether the program should perform a model fit \code{"m"}, a spline fit \code{"s"} or
+both \code{"b"}. Default:~\code{"b"}.
+\item \code{log.x.gc, log.y.gc}: logical, indicates whether a $\ln\left(x+1\right)$.
+transformation should be applied to time (x-axes) or growth values (y-axes). Default:~\code{FALSE}.
+\item \code{interactive}: logical, controls whether the fit of each  growth curve is controlled manually by the user. Default:~\code{TRUE}.
+\item \code{nboot.gc}: number of bootstrap samples used for the
+model free growth curve fitting. Use \code{0} to disable the bootstrap. Default:~\code{0}.
+\item \code{smooth.gc}: parameter describing the smoothness of the spline fit; usually (not necessary) $\in(0;1]$. Set \code{smooth.gc} to \code{NULL} causes the program to query an optimal value via cross validation techniques. Note: This is partly experimental. In future improved implementations of the \code{smooth.spline} function may lead to different results. See documentation of the \proglang{R} function \code{smooth.spline} for further details. Especially for datasets with few data points the option \code{NULL} might result in a too small smoothing parameter, which produces an error in \code{smooth.spline}. In that case the usage of a fixed value is recommended. 
+Default:~\code{NULL}.
+\item \code{model.type}: string vector, giving the names of the parametric models which should be fitted to the data. The addition of user defined models is described in Section~\ref{sec:addmodel}. Default:~\code{c("logistic", "gompertz", "richards", "gompertz.exp")}.
+\end{itemize}
+%
+%
+%
+\subsection{EC50 options}
+\begin{itemize}
+\item \code{have.atleast}: minimum number of different values for the growth parameter one should have for  estimating a dose-response curve. Note that the
+bootstrapping procedure needs at least six values. Default:~\code{6}.
+\item \code{parameter}: The column in the output table which should be used for creating a
+dose response curve. See the description of the output table in Section~\ref{sec:progrun}. Usually you will use numbers $\in\left[9;12\right]$ and $\in\left[28;35\right]$.
+Default:~\code{9} (which represents $\mu$ from the parametric fit).
+\item \code{smooth.dr}:  parameter describing the smoothness of the spline fit; usually (not necessary) $\in(0;1]$. See documentation of the \proglang{R} function \code{smooth.spline} for further details. Default:~\code{NULL}.
+\item \code{log.x.dr, log.y.dr}: logical, indicates whether a $\ln\left(x+1\right)$ transformation should be applied to dose (x-axes) or response (y-value). Default:~\code{FALSE}.
+\item \code{nboot.dr}: number of bootstrap samples for the EC50.
+Use \code{0} to disable bootstrapping. Default:~\code{0}.
+\end{itemize}
+%
+%
+%
+\section{Program run}
+\label{sec:progrun}
+%
+\subsection{Standard workflow}
+Having the data successfully arranged one types
+\begin{Code}
+TestRun <- grofit(time, data, TRUE)
+\end{Code}
+to run the program.
+
+This will run the standard workflow of the program with the default options specified in \code{grofit.control}. It is separated into two major parts: the growth curve fitting and the dose response curve fitting (see Figure~\ref{fig:flowchart}).
+First, the function \code{gcFit} is called to perform the curve fit with the desired options. This procedure includes the parametric fit, the model free fit and respective bootstrapping.
+
+Note: One should not get confused by the error messages, which will occur during the call of the function \code{gcFitModel}. These messages result from the \proglang{R} procedure \code{nls} and indicate that a certain parametric model could not be fitted to data. This inidicates that different models are required.
+
+The result of \code{gcFit} is an object of class \code{gcFit}. See documentation for further details.
+
+The output table of \code{summary(gcFit)} serves as the input for \code{drFit}. The function autonomously reads the table and determines the number of different experiments by using the experiment ID in the first column of the table. Those which appear to have less valid values than specified by \code{have.atleast} will be automatically removed.\\
+If one is only interested in growth curve fitting type:
+\begin{Code}
+TestRun <- grofit(time, data, FALSE)
+\end{Code}
+This will only run the \code{gcFit} function.
+Advanced users may use the given functions apart from the standard workflow. We separated the program in modular parts that can be called individually. See documentation for further details.
+%
+%
+\subsection{Example}
+In this section we provide an example for the standard workflow of \pkg{grofit}. The example corresponds to Figure~\ref{fig:howto} and describes the fitting of growth curves (Figure~\ref{fig:howto}\,a) by using the function \code{gcFit} and the subsequent estimation of the corresponding dose response curve  (Figure~\ref{fig:howto}\,b) and\,c) by \code{drFit}. One should carefully compare the workflow in the flowchart in Figure~\ref{fig:flowchart} to monitor the
+different processing steps and have also a look to the options and default values described in Section~\ref{options}.
+\begin{enumerate}
+\item In a first step appropriate options can be set by the function \code{grofit.conctrol}, see Section~\ref{options} for details. Following two slightly different settings are defined.
+\begin{Code}
+MyOpt1 <- grofit.control(smooth.gc = 0.5, parameter = 28,
+           interactive = FALSE)
+MyOpt2 <- grofit.control(smooth.gc = 0.5, parameter = 28,
+           interactive = FALSE, log.x.dr = TRUE)
+\end{Code}
+This sets the smoothness of the spline fit of growth curves (\code{smooth.gc}), chooses $\mu$ of the model free fit as response parameter (\code{parameter}) and disables the interactive mode. Differing from the first option, \code{MyOpt2} enables the logarithmic transformation of the concentrations for the dose response curve (\code{log.x.dr}).
+\item The example data is part of the \pkg{grofit} package and is stored in the variables \code{grofit.data} and \code{grofit.time}.
+\item To start the standard workflow with the one and the other option type:
+\begin{Code}
+TestRun1 <- grofit(grofit.time, grofit.data, TRUE, MyOpt1)
+TestRun2 <- grofit(grofit.time, grofit.data, TRUE, MyOpt2)
+\end{Code}
+The parameter \code{TRUE} indicates that a dose response curve will be estimated from the growth curves.
+\end{enumerate}
+In both cases \code{grofit} does the following: first the \code{grofit} function calls the \code{gcFit} function that performs the growth curve fitting. The option \code{fit.opt = "b"} ({\it b}oth, default value; see Section~\ref{sec:gcopt}) means that both the parametric and the model free fit will be performed.
+
+The parametric fit is processed by the \code{gcFitModel} function that utilises the \proglang{R} internal function \code{nls}. A guess of initial values for $A, \mu, \lambda$ is obtained from a local weighted regression method (\proglang{R} function \code{lowess}) which is calculated by the \code{gcFitSpline} function. These values are passed on to the \code{initMODEL} function generating initial values for possible additional parameters (in case of Richards or modified Gompertz law). Due to the option \code{model.type = c("logistic", "gompertz", "richards", "gompertz.exp")} the program tries to fit every available parametric model. On the screen the status of the fit is shown: \code{OK}, \code{nls() failed to converge with stopCode} or \code{ERROR in nls()}. If \code{nls} fails to converge the respecting \code{stopCode} (see documentation of \code{nls}) is provided. The \code{ERROR} status usually results from sigular gradients or infinite values produced during the call of the \code{nls} function. This quite frequent error is not to be taken critical and indicates only that a certain model is not an appropriate description of the growth curve (see also documentation of \code{gcFitModel}).
+
+Then, \code{gcFit} calls the \code{gcFitSpline} function to perform a model free spline fit by using the \proglang{R} internal function \code{smooth.spline}.
+
+In the interactive mode (not in this example) \code{grofit} presents both data fits and asks the user for consistence with expectations. If the fit satisfies your expectations chose \code{y}, otherwise the growth curve will be excluded from further analysis.
+
+Following fitting the last growth curve, the \code{gcFit} function returns the calculated growth parameters as an object of class \code{gcFit} to the \code{grofit} function. 
+
+The output of \code{summary(gcFit)} serves then as an input of \code{drFit} to generate dose response curves. In the workspace a short message informs about the number of different experiments and the number of valid datasets per experiment. Here the example dataset pertains to one experiment with parameters from seven growth curves. In the workspace the half maximal effective concentration (EC50) and the corresponding response value are shown. The following lines gives the output produced by \code{drFit} in case of \code{TestRun1}.
+<<echo=FALSE>>=
+library("grofit")
+data("grofit.time")
+data("grofit.data")
+MyOpt1 <- grofit.control(smooth.gc = 0.5, parameter = 28, interactive = FALSE, suppress.messages = TRUE)
+out.gc <- gcFit(grofit.time, grofit.data, MyOpt1)
+dr <- drFit(summary(out.gc), control = grofit.control(parameter = 28))
+@
+
+
+The complete code to reproduce Figures~\ref{fig:howto}(a), \ref{fig:howto}(b) and \ref{fig:howto}(c):
+
+Define options
+\begin{CodeChunk}
+\begin{CodeOutput}
+MyOpt1 <- grofit.control(smooth.gc = 0.5, parameter = 28,
+           interactive = FALSE)
+MyOpt2 <- grofit.control(smooth.gc = 0.5, parameter = 28,
+           interactive = FALSE, log.x.dr = TRUE)
+\end{CodeOutput}
+\end{CodeChunk}
+
+Run grofit
+\begin{CodeChunk}
+\begin{CodeOutput}
+TestRun1 <- grofit(grofit.time, grofit.data, TRUE, MyOpt1)
+TestRun2 <- grofit(grofit.time, grofit.data, TRUE, MyOpt2)
+\end{CodeOutput}
+\end{CodeChunk}
+
+Defining color and plot symbol vector
+\begin{CodeChunk}
+\begin{CodeOutput}
+colData <- c("black", "cyan", "magenta", "green", "blue", "orange", "grey")
+pch     <- 1:7
+dev.new(width = 8, height = 3)
+par(mfrow = c(1, 3), mar = c(5.1, 4.1, 3.1, 1.1))
+\end{CodeOutput}
+\end{CodeChunk}
+
+Generate Fig. 1a, b, c
+\begin{CodeChunk}
+\begin{CodeOutput}
+plot(TestRun1$gcFit, opt = "s", colData = colData, colSpline = 1,
+       pch = pch, cex = 1)
+title("a")
+plot(TestRun1$drFit$drFittedSplines[[1]], colData = colData,
+       pch = pch, cex = 1)
+title("b")
+plot(TestRun2$drFit$drFittedSplines[[1]], colData = colData,
+       pch = pch, cex = 1)
+title("c")
+\end{CodeOutput}
+\end{CodeChunk}
+
+Another useful example to test the effect of \code{log.x.dr}, is to choose \code{parameter = 9} (maximum slope of the parametric fit) for the dose response curve. While \code{log.x.ec = FALSE} leads to an unreliable dose response curve, \code{log.x.dr = TRUE} produces acceptable results.
+
+It is also recommended to try out the different generic \code{plot} functions for objects of class \code{gcFit}, \code{gcBootSpline}, \code{gcFitModel}, \code{drFitSpline} and \code{drBootSpline}.
+
+Logarithmic transformation might be useful in cases when the data points are not equally distributed over the x-axes. However, data fitting is always a delicate issue so that we can not provide general recommendations for data transformations or the choice of certain smoothing parameters.
+%
+\subsection{Performance}
+The performance was tested on an IBM T43 Notebook (Intel Pentium M 2GHz processor with 1GB RAM and Windows XP Servicepack2) using \proglang{R} version 2.2.1. For a fair comparison we used the automatic mode. For 100 growth curves each comprising 25 data points the parametric fit, the model free fit and dose response curve estimation, took in total 19 sec. Enabling bootstrap samples for the model free fit, as well as for the dose response curve (100 bootstrap samples) took 1 min. 51 sec. It appears thus reasonable to assume that the package is also applicable to high throughput datasets. 
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=1\textwidth]{Flowchart.pdf}}
+\caption{The flowchart shows an overview of the standard workflow. \pkg{grofit} contains two major components: \code{gcFit} and \code{drFit}.
+\code{gcFit} executes the routines for parametric (\code{gcFitModel}) and  model free (\code{gcFitSpline}) growth curve fitting as well as a bootstrap procedure (\code{gcBootSpline}) for the model free fit. \code{gcFitModel} depends on several functions of the \pkg{grofit} package and also on the \proglang{R} internal function \code{nls}. \code{gcFitSpline} provides the model free spline fit and \code{gcBootSpline} creates a respective bootstrap sample by conducting several times \code{gcFitSpline}.
+\code{drFit} uses the output of \code{gcFit} to relate concentrations to certain characteristic growth values. The dose response curve fit and EC50 estimation is performed by \code{drFitSpline} (using \proglang{R} function \code{smooth.spline}), whereas statistics of EC50 estimation are obtained from a bootstrap sample given by \code{drBootSpline}. Blue boxes indicate \proglang{R} internal functions.}
+\label{fig:flowchart}
+\end{figure}
+% %
+% %
+% %
+\subsection{Adding parametric models}
+\label{sec:addmodel}
+The user can implement his own parametric growth model by writing a model definition file and a function to generate respective initial values for the parameter estimation. To create a model file, type \code{fix(NEWMODEL)}. As a common standard in \pkg{grofit} the model definition has to be dependent on time, $A, \mu, \lambda$ and a numeric vector that contains additional parameters, used e.g., for Richards or the modified Gompertz growth law (see Table~\ref{tab:models}). In case that no additional parameters are necessary initialize \code{addpar = NULL} in the function header.
+
+Example for model definition without additional parameters
+\begin{CodeChunk}
+\begin{CodeInput}
+NEWMODEL <- function (time, A, mu, lambda, addpar = NULL)
+{
+	NEWMODEL <- A / (1 + exp(4 * mu * (lambda - time) / A + 2))
+}
+\end{CodeInput}
+\end{CodeChunk}
+
+Example for model definition with additional parameters
+\begin{CodeChunk}
+\begin{CodeInput}
+NEWMODEL <- function (time, A, mu, lambda, addpar)
+{
+alfa   <- addpar[1]
+tshift <- addpar[2]
+e      <- exp(1)
+y      <- A * exp(-exp(mu * e * (lambda - time) / A + 1)) 
+                                 + A * exp(alfa * (time - tshift))
+	NEWMODEL <- y
+}
+\end{CodeInput}
+\end{CodeChunk}
+The model definition file should be saved as \code{NEWMODEL.R}
+
+The function to generate respective initial values follows the name convention \code{initNEWMODEL}. It must be dependent on time, growth data, $A, \mu$ and $\lambda$. These parameters can be used to calculate the initial values, which will be used in the \proglang{R} function \code{nls} during the run of \code{gcFitModel}. The function returns a list object comprising all parameters that are implemented in the model definition. One should ensure to initialize \code{addpar = NULL} in  case that no additional parameters are used.
+
+Example for initial value function for a model  without additional parameters
+\begin{CodeChunk}
+\begin{CodeInput}
+initNEWMODEL <- function (time, y, A, mu, lambda)
+{
+A      <- max(y)
+mu     <- mu
+lambda <- lambda
+initNEWMODEL <- list (A = A, mu = mu, lambda = lambda, addpar = NULL)
+}
+\end{CodeInput}
+\end{CodeChunk}
+
+Example for initial values function for a model  with additional parameters
+\begin{CodeChunk}
+\begin{CodeInput}
+initNEWMODEL <- function (time, y, A, mu, lambda)
+{
+alfa   <- 0.1
+tshift <- max(time) / 10
+A      <- max(y)
+mu     <- mu
+lambda <- lambda
+initNEWMODEL <- list(A = A, mu = mu, lambda = lambda, 
+                                     addpar = c(alfa, tshift))
+}
+\end{CodeInput}
+\end{CodeChunk}
+
+If one creates the functions with an editor outside the \proglang{R} environment, use of the \code{source} command should be applied to make the functions available to \proglang{R}. To implement the new model the string \code{"NEWMODEL"} in the \code{model.type} option (see Section~\ref{sec:gcopt}) must be added. During the program run \pkg{grofit} will search for the functions \code{NEWMODEL} and \code{initNEWMODEL} and stop automatically with an error message if any of these is missing or not in the correct format. Most likely such error messages are caused by simple spelling mistakes or due to the lack of the correct \code{source} command.
+
+\pkg{grofit} allows for adjusting specific settings like type of fit, logarithmic data transformation or the number of bootstrap samples. The growth curve fit can be processed automatically or in an interactive mode. In the interactive mode the user is allowed to exclude unreliable measurements from dose response curve estimation.
+
+To generate graphical out the package provides generic plot functions for objects of the classes \code{gcFit}, \code{drFit}, \code{gcFitModel}, \code{gcFitSpline}, \code{gcBootSpline}, \code{drFitSpline} and \code{drBootSpline} created by the functions of the same name.
+
+The two output tables of presumably major interest are generated by the generic \code{summary} functions for \code{drFit} and \code{gcFit} and described in the following tables labeled {\it gcFit} and  {\it drFit} (Tables~\ref{tab:growth}, \ref{tab:growth2}, \ref{tab:growth2b}, \ref{tab:growth3}, \ref{tab:dr}).
+\begin{table}[p]
+\begin{center}
+\begin{tabular}{c|l||l}
+\multicolumn{3}{c}{{\it gcFit}}\\ \hline
+Column Number & Column name & Description\\ \hline
+1 & \code{test.id} &  Name of the experiment \\ \hline
+2 & \code{add.id} & Additional information \\ \hline
+3 & \code{concentration} & Concentration of substrate \\ \hline
+4 & \code{reliability} &  reliability flag  \\ \hline
+5 & \code{use.model} & parametric model used \\ \hline
+6 & \code{log.x} &  logarithmic transformation\\ \hline
+7 & \code{log.y} & logarithmic transformation  \\ \hline
+8 & \code{nboot.fit} & number of bootstrap samples
+\end{tabular}
+\caption{Description of {\it gcFit}. Each row of the above table is generated in the \code{gcFit} function.}
+\label{tab:growth}
+\end{center}
+\end{table}
+% 
+\begin{table}[p]
+\begin{center}
+\begin{tabular}{c|l||l}
+\multicolumn{3}{c}{{\it gcFit} continued}\\ \hline
+Column Number & Column name & Description\\ \hline
+9  & \code{mu.model} & max. slope $\mu$\\ \hline
+10 & \code{lambda.model} & lag-phase $\lambda$ \\ \hline
+11 & \code{A.para} & maximum growth \\ \hline
+12 & \code{Integral.model} & integral \\ \hline
+13 & \code{stdmu.model} & standard deviation $\mu$ (cross validation) \\ \hline
+14 & \code{stdlambda.model} & standard deviation $\lambda$ (cross validation) \\ \hline
+15 & \code{stdA.model} & standard deviation $A$  (cross validation) \\ \hline
+16 & \code{ci90.mu.model.lo} & 90 \% CI lower boundary $\mu$ \\ \hline
+17 & \code{ci90.mu.model.up} & 90 \% CI interval upper boundary $\mu$ \\ \hline
+18 & \code{ci90.lambda.model.lo} & 90 \% CI interval lower boundary $\lambda$\\ \hline
+19 & \code{ci90.lambda.model.up} & 90 \% CI interval upper boundary $\lambda$ \\ \hline
+20 & \code{ci90.A.model.lo} &  90 \% CI interval lower boundary $A$\\ \hline
+21 & \code{ci90.A.model.up} &  90 \% CI interval upper boundary $A$\\ \hline
+22 & \code{ci95.mu.model.lo} &  95 \% CI interval lower boundary $\mu$\\ \hline
+23 & \code{ci95.mu.model.up} &  95 \% CI interval upper boundary $\mu$\\ \hline
+24 & \code{ci95.lambda.model.lo} & 95 \% CI interval lower boundary $\lambda$ \\ \hline
+25 & \code{ci95.lambda.model.up} & 95 \% CI interval upper boundary $\lambda$ \\ \hline
+26 & \code{ci95.A.model.lo} &  95 \% CI interval lower boundary $A$\\ \hline
+27 & \code{ci95.A.model.up} &  95 \% CI interval upper boundary $A$
+\end{tabular}
+\caption{Description of {\it gcFit}. Each row of the above table is generated by the call of generic \code{summary} function for \code{gcFitModel} objects.}
+\label{tab:growth2}
+\end{center}
+\end{table}
+%
+\begin{table}[p]
+\begin{center}
+\begin{tabular}{c|l||l}
+\multicolumn{3}{c}{{\it gcFit} continued}\\ \hline
+Column Number & Column name & Description\\ \hline
+28  & \code{mu.spline} & max. slope $\mu$\\ \hline
+29 & \code{lambda.spline}& lag-phase $\lambda$ \\ \hline
+30 & \code{A.nonpara} & maximum growth \\ \hline
+31 & \code{integral.spline} & integral \\ \hline
+\end{tabular}
+\caption{Description of {\it gcFit}. Columns 28-31 are generated by the call of the function generic \code{summary} function for \code{gcFitSpline} objects.}
+\label{tab:growth2b}
+\end{center}
+\end{table}
+%
+\begin{table}[p]
+\begin{center}
+\begin{tabular}{c|l||l}
+\multicolumn{3}{c}{{\it gcFit} continued}\\ \hline
+Column Number & Column name & Description\\ \hline
+32  & \code{mu.bt} & mean of bootstrap $\mu$\\ \hline
+33 & \code{lambda.bt}& mean of bootstrap$\lambda$ \\ \hline
+34 & \code{A.bt} &   mean of bootstrap$A$ \\ \hline
+35 & \code{integral.bt} & mean of bootstrap integral \\ \hline
+36 & \code{stdmu.bt}& standard deviation $\mu$ (bootstrap) \\ \hline
+37 & \code{stdlambda.bt} & standard deviation $\lambda$ (bootstrap) \\ \hline
+38 & \code{stdA.bt} & standard deviation  $A$ (bootstrap) \\ \hline
+39 & \code{stdIntegral.bt} & standard deviation integral (bootstrap) \\ \hline
+40 & \code{ci90.mu.bt.lo} & 90 \% CI lower boundary $\mu$ \\ \hline
+41 & \code{ci90.mu.bt.up} & 90 \% CI upper boundary $\mu$ \\ \hline
+42 & \code{ci90.bt.lambda.lo} & 90 \% CI lower boundary $\lambda$\\ \hline
+43 & \code{ci90.bt.lambda.up} & 90 \% CI upper boundary $\lambda$ \\ \hline
+44 & \code{ci90.A.bt.lo} &  90 \% CI lower boundary $A$\\ \hline
+45 & \code{ci90.A.bt.up} &  90 \% CI upper boundary $A$\\ \hline
+46 & \code{ci90.integral.bt.lo} &  90 \% CI lower boundary integral\\ \hline
+47 & \code{ci90.integral.bt.up} &  90 \% CI upper boundary integral\\ \hline
+48 & \code{ci95.mu.bt.lo} &  95 \% CI lower boundary $\mu$\\ \hline
+49 & \code{ci95.mu.bt.up} &  95 \% CI upper boundary $\mu$\\ \hline
+50 & \code{ci95.lambda.bt.lo} & 95 \% CI lower boundary $\lambda$ \\ \hline
+51 & \code{ci95.lambda.bt.up} & 95 \% CI upper boundary $\lambda$ \\ \hline
+52 & \code{ci95.A.bt.lo} &  95 \% CI lower boundary $A$\\ \hline
+53 & \code{ci95.A.bt.up} &  95 \% CI upper boundary $A$\\ \hline
+54 & \code{ci95.integral.bt.lo} &  95 \% CI lower boundary integral\\ \hline
+55 & \code{ci95.integral.bt.up} &  95 \% CI upper boundary integral
+\end{tabular}
+\caption{Description of {\it gcFit}. Columns 32-55 are generated by the call of the generic \code{summary} function for \code{gcBootSpline} objects.}
+\label{tab:growth3}
+\end{center}
+\end{table}
+%
+\begin{table}[p]
+\begin{center}
+\begin{tabular}{c|l||l}
+\multicolumn{3}{c}{{\it drFit}}\\ \hline
+Column Number & Column name & Description\\ \hline
+1  & \code{name} & name of experiment\\ \hline
+2  & \code{log.x} & logarithmic transformation\\ \hline
+3  & \code{log.y} & logarithmic transformation\\ \hline
+4  & \code{Samples} & number of bootstrap samples\\ \hline
+5  & \code{EC50} & EC50 value\\ \hline
+6  & \code{yEC50} & y value corresponding to EC50\\ \hline
+7  & \code{EC50.orig} & EC50 value in original scale\\ \hline
+8  & \code{yEC50.orig} & y value EC50 in original scale\\ \hline
+9  & \code{meanEC50} & mean EC50 from bootstrap\\ \hline
+10  & \code{sdEC50} & standard deviation EC50 (bootstrap)\\ \hline
+11  & \code{ci90EC50.lo} & 90 \% CI lower boundary (bootstrap)\\ \hline
+12  & \code{ci90EC50.up} & 90 \% CI upper boundary (bootstrap) \\ \hline
+13  & \code{ci95EC50.lo} & 95 \% CI lower boundary (bootstrap)\\ \hline
+14  & \code{ci95EC50.up} & 95 \% CI upper boundary (bootstrap) \\ \hline
+15  & \code{meanEC50.orig} & mean EC50 from bootstrap in original scale\\ \hline
+16  & \code{ci90EC50.orig.lo} & 90 \% CI lower boundary in original scale\\ \hline
+17  & \code{ci90EC50.orig.up} & 90 \% CI upper boundary in original scale\\ \hline
+18  & \code{ci95EC50.orig.lo} & 95 \% CI lower boundary in original scale\\ \hline
+19  & \code{ci95EC50.orig.up} & 95 \% CI upper boundary in original scale
+\end{tabular}
+\caption{
+Description of output ({\it drFit}). Each row of the above table is generated in the \code{drFit} function.
+Description of {\it drFit} continued. Columns 5-8 are generated by the call of the generic \code{summary} function for \code{drFitSpline} objects. Columns 9-19 are generated by the call of the generic \code{summary} function for \code{drBootSpline} objetcs.}
+\label{tab:dr}
+\end{center}
+\end{table}
+%
+%
+%
+\section{Discussion and Conclusions}
+\pkg{grofit} is  a useful tool for all scientists that employ biological growth analysis. Its properties reduce the potential systematic error by enabling the user to carefully control the type of fitting. It is anticipated that this type of control will correspondingly produce quite reliable results. An earlier version of the package was used for \cite{Has06} and is therefore assumed to be rather well tested. 
+
+Growth curve modeling is also popular in areas outside biology. For example, in economic theory is much interest in relating government expenditures to economic growth. In the social sciences, the analysis of growth curves encounters a fairly long tradition. Typically, observations made on many individuals across pretest and post-test occasions are compared and the effect of several covariables is analysed. In many cases, a parametric model for growth is assumed or the inference is based on a general linear model~\cite{Duncan06}. While these applications may share some similarity with the specific application described above there are some special issues that are not implemented in \pkg{grofit}.
+
+The typical application of \pkg{grofit} considers a situation where a biomass or a similar quantitative variable is measured  over time under different experimental conditions. In this paper, we used the example of cellular growth in the presence of different concentrations of a chemical compound. Similar situations appear in other areas of biology and medicine. For example, a researcher studying the effect of a certain drug on  obesity will measure the animal weight over time for different drug doses. In some cases, the growth curves can be described parametrically in other situations the implemented model free approach based on splines  might be more appropriate. \pkg{grofit} offers the flexibility to derive characteristic growth parameters like $A,\mu,\lambda$ from parametric and model free fits. The effect of quantitative variables like compound or drug doses can correspondingly be studied  by estimating a dose response relationship. Typically, such data exhibit a much higher degree of scatter around the estimated ideal growth curve than our example of cellular growth. This variability is {\it per se} taken into account by the implemented bootstrap technique. The bootstrap confidence intervals for the characteristic growth parameters will in such cases typically be larger reflecting the lower precision of the measurements.
+
+The related \proglang{R} package \pkg{agce} \citep{Gottardo2006} provides methods to compare growth curves under different conditions using MANOVA and similar methods. The \pkg{agce} code is indeed useful when the growth curve is a linear function of time or when the data can be transformed to be approximately linear. \pkg{grofit} can be used for nonlinear growth curves where linear statistical methods can not be applied. Another useful package depicts \pkg{drc} by \cite{drc}. The authors focus on the parametric fit of dose response curves and also provide access for statistical analysis. Although \pkg{grofit} allows in principle the application of the parametric fit routine \code{gcFitModel} to dose-response curve data, \pkg{drc} is much more specialized and thereore recommended to users with a certain interest in parametric dose response curves.
+
+In the current version of \pkg{grofit} the effect of a covariable like  e.g., drug concentration can be analyzed by comparison of one of the characteristic parameters $A, \mu$ or $\lambda$ with different values of the covariable. The advantage of this approach is that standard univariate statistical techniques can be applied. For example, if growth curves for a control and a treatment situation are to be compared one can use a two sample statistical test to detect significant effects of the treatment. The disadvantage of this approach is however, that the characteristic parameter values only display a certain effect on the growth curve and can not in general capture the treatment effect on the growth curve as a whole. We intend to improve \pkg{grofit} to compute the influence of covariates in a more general way, see e.g., \cite{Altmann95}.
+%
+%
+%
+\section*{Acknowledgment}
+The authors thank Manfred Berres for helpful discussions. This work was supported by the 
+Federal Ministry of Education and Research (BMBF grant 031 3982 C) as part of the TRANSLUCENT project within the SysMO (Systems Biology of Microorganisms) initiative.
+\bibliography{grofit}
+\end{document}
