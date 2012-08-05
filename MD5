@@ -1,4 +1,4 @@
-071c6ee50757c1a98d94110f6e4e0cac *DESCRIPTION
+d3fbf54503539d7076ec8e6f44cb0944 *DESCRIPTION
 9fdfeb11f7ddba6f3aab9aaa6b1ac5dd *NAMESPACE
 2aaa75cf410ea70f79eb652eae57d676 *R/drBootSpline.R
 d238430f0be437f6d1be3087730a0797 *R/drFit.R
@@ -18,7 +18,7 @@ e1eb4b2f6c139d1523c18e67ab75712f *R/initgompertz.exp.R
 2134378bbcb1b4308ff9355bc75b7e61 *R/logistic.R
 de2e94c386a08b671edf57846e8fd649 *R/low.integrate.R
 918d15b3ed7a7382978cb4ed19df268c *R/plot.drBootSpline.R
-92c71e980ce09fba86eef9418de85356 *R/plot.drFit.R
+87e45a7fdb325d49e397cff51a9342b2 *R/plot.drFit.R
 95696d502485ebb5d701c56ddaca5872 *R/plot.drFitSpline.R
 baebe98b54e2b87c5003035b3ac15ce6 *R/plot.gcBootSpline.R
 ea1a89bf04615d3305a55a4ea67e411f *R/plot.gcFit.R
@@ -60,7 +60,7 @@ f5a9aace9e10d1d53c25f3d801136c6f *man/initgompertz.exp.Rd
 684e4973a6ff51f0a372ad9be389093b *man/plot.drFit.Rd
 9db36ded3fb9a090c0b14fb67ea33643 *man/plot.drFitSpline.Rd
 304b8f91b5414372025752108c8ad3cc *man/plot.gcBootSpline.Rd
-9fd36fe72b87a4b5c196ca55a105e3eb *man/plot.gcFit.Rd
+344b3ccc6927ae13510dfffd5b783944 *man/plot.gcFit.Rd
 df375d2c852936f5d46359d32692e3c4 *man/plot.gcFitModel.Rd
 8f958c3c56165ab800cfc0a9c8b9f94c *man/plot.gcFitSpline.Rd
 d312ea102984613c602709ae160199f2 *man/ran.data.Rd

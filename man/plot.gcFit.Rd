@@ -51,7 +51,7 @@ Other graphical parameters may also passed as arguments. This has currently no e
 data(grofit.time)
 data(grofit.data)
 TestRun <- gcFit(grofit.time, grofit.data)
-x11(width=10,height=5)
+dev.new(width=10,height=5)
 par(mfrow=c(1,2))
 plot(TestRun, opt="s", pch=1:7, cex=1, colSpline=2, colData=1:7)
 title("Spline fit")
