@@ -29,7 +29,7 @@ Additional parameters have no effect in this type of model. They belong to the s
 }
 \details{
 The function follows the parametrization
-\deqn{y(t)=\frac{A}{1+\exp\left(\frac{4\mu}{A}(\lambda-t)+2\right)}}{A/(1+exp((4 mu/A)(lambda-t)+1))}
+\deqn{y(t)=\frac{A}{1+\exp\left(\frac{4\mu}{A}(\lambda-t)+2\right)}}{A/(1+exp((4 mu/A)(lambda-t)+2))}
 }
 \value{
 Numeric vector giving the values of logistic growth law for numeric input vector \code{time}.

@@ -1,4 +1,5 @@
-4c1c8925bbaa990a7d720cdd09a68831 *DESCRIPTION
+071c6ee50757c1a98d94110f6e4e0cac *DESCRIPTION
+9fdfeb11f7ddba6f3aab9aaa6b1ac5dd *NAMESPACE
 2aaa75cf410ea70f79eb652eae57d676 *R/drBootSpline.R
 d238430f0be437f6d1be3087730a0797 *R/drFit.R
 9eeba7f2f63f6a9c296d4d938f2e855f *R/drFitSpline.R
@@ -35,18 +36,6 @@ dd4fb85495048987014c54a194f1721a *R/summary.drFit.R
 e5b721810119cd12d5a52557daf6961c *data/grofit.data.rda
 d1df844d6e2f5fee446667966c28acd4 *data/grofit.time.rda
 1804b6eb566ec1a373fd12def2828422 *inst/CITATION
-4c90df02e7021ac54ed16bde9da245f5 *inst/doc/Flowchart.pdf
-6b74f4f2cc63d737a839bc600cb0f5f7 *inst/doc/grofit.Rnw
-326ed37aab5d26544cf0d13b389239b0 *inst/doc/grofit.bib
-f6a6d72a5eb79d2139d01118c9a4d73a *inst/doc/grofit.pdf
-48669c4e55fe2392469dcf01641c5c06 *inst/doc/jss.bst
-84f542c2900480e1564a91e6f7607ae5 *inst/doc/jss.cls
-252b25c34d2711c7a5eba4989162c26c *inst/doc/jss.dbj
-a88f2519f1db6bb1b46bd9af2344ef38 *inst/doc/jss.drv
-6542e9df017ed51b24c419f13f70738e *inst/doc/jss.dtx
-e16d2652d3cd7f40dbe46ef0064d7a2d *inst/doc/jss.ins
-b9564ddd59a06782310989e8f33db55e *inst/doc/jsslogo.jpg
-8f54047f3ef2bd89cdf553635c6b372b *inst/doc/scheme.pdf
 4d6c4f53c5c7e5eeb54c51ae8ab6747f *man/drBootSpline.Rd
 c3bac201948c029fa9f65d33af160d8e *man/drFit.Rd
 e021c25c50c673862a5db288c8d128ac *man/drFitSpline.Rd
@@ -65,7 +54,7 @@ a407b34b8dd6022e0a1201f3a12b2b42 *man/grofit.time.Rd
 f5a9aace9e10d1d53c25f3d801136c6f *man/initgompertz.exp.Rd
 0624e04e88befa97f70d08b0d98b42ad *man/initlogistic.Rd
 284da7dfabdaef3f3e7730bb945627e8 *man/initrichards.Rd
-4e6a0b51fca7bf78c0b4eb580ec5ab52 *man/logistic.Rd
+9f177ad2e682ca7ee921c6a07c732f01 *man/logistic.Rd
 58813bd46d0614654396a43276fb0aaf *man/low.integrate.Rd
 9cba273d506652d8d5e836b935e5717c *man/plot.drBootSpline.Rd
 684e4973a6ff51f0a372ad9be389093b *man/plot.drFit.Rd
